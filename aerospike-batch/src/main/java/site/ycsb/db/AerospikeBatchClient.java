@@ -126,12 +126,19 @@ public class AerospikeBatchClient extends site.ycsb.DB {
         records = client.get(batchPolicy, keys);
       }
 
+      if (records.length != readRecordsSize){
+        throw new IllegalStateException("records size is not 200");
+      }
+
+      for (Record record: records) {
+        if (record == null) {
+          System.err.println("Record key " + key + " not found (read)");
+          throw new NullPointerException("record is null");
+        }
+      }
+
       // check the result of last record
       Record record = records[records.length - 1];
-      if (record == null) {
-        System.err.println("Record key " + key + " not found (read)");
-        throw new NullPointerException("record is null");
-      }
       for (Map.Entry<String, Object> entry: record.bins.entrySet()) {
         result.put(entry.getKey(),
             new ByteArrayByteIterator((byte[])entry.getValue()));
