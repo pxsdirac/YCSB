@@ -67,14 +67,14 @@ public class AerospikeBatchClient extends site.ycsb.DB {
     String user = props.getProperty("as.user");
     String password = props.getProperty("as.password");
     int port = Integer.parseInt(props.getProperty("as.port", DEFAULT_PORT));
-    int timeout = Integer.parseInt(props.getProperty("as.timeout",
-        DEFAULT_TIMEOUT));
+//    int timeout = Integer.parseInt(props.getProperty("as.timeout",
+//        DEFAULT_TIMEOUT));
 
-    readPolicy.timeout = timeout;
-    batchPolicy.timeout = timeout;
-    insertPolicy.timeout = timeout;
-    updatePolicy.timeout = timeout;
-    deletePolicy.timeout = timeout;
+//    readPolicy.timeout = timeout;
+//    batchPolicy.timeout = timeout;
+//    insertPolicy.timeout = timeout;
+//    updatePolicy.timeout = timeout;
+//    deletePolicy.timeout = timeout;
 
     ClientPolicy clientPolicy = new ClientPolicy();
 
