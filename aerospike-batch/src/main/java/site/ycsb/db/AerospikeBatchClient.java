@@ -154,7 +154,6 @@ public class AerospikeBatchClient extends site.ycsb.DB {
 
   private Status write(String table, String key, WritePolicy writePolicy,
       Map<String, ByteIterator> values) {
-    System.out.println(key);
     Bin[] bins = new Bin[values.size()];
     int index = 0;
 
