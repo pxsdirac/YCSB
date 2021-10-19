@@ -185,7 +185,8 @@ public class AerospikeBatchClient extends site.ycsb.DB {
   @Override
   public Status update(String table, String key,
                        Map<String, ByteIterator> values) {
-    return write(table, key, updatePolicy, values);
+    System.err.println("update not implemented");
+    return Status.ERROR;
   }
 
   @Override
