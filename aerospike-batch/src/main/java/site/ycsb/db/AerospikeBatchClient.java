@@ -21,25 +21,19 @@ import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Bin;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
-import com.aerospike.client.policy.ClientPolicy;
-import com.aerospike.client.policy.Policy;
-import com.aerospike.client.policy.RecordExistsAction;
-import com.aerospike.client.policy.WritePolicy;
+import com.aerospike.client.policy.*;
 import site.ycsb.ByteArrayByteIterator;
 import site.ycsb.ByteIterator;
 import site.ycsb.DBException;
 import site.ycsb.Status;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.Vector;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * YCSB binding for <a href="http://www.aerospike.com/">Areospike</a>.
  */
-public class AerospikeClient extends site.ycsb.DB {
+public class AerospikeBatchClient extends site.ycsb.DB {
   private static final String DEFAULT_HOST = "localhost";
   private static final String DEFAULT_PORT = "3000";
   private static final String DEFAULT_TIMEOUT = "10000";
@@ -50,9 +44,15 @@ public class AerospikeClient extends site.ycsb.DB {
   private com.aerospike.client.AerospikeClient client = null;
 
   private Policy readPolicy = new Policy();
+  private BatchPolicy batchPolicy = new BatchPolicy();
   private WritePolicy insertPolicy = new WritePolicy();
   private WritePolicy updatePolicy = new WritePolicy();
   private WritePolicy deletePolicy = new WritePolicy();
+
+  private int allRecordsSize = 1000;
+  private int readRecordsSize = 200;
+  private List<Integer> allRecordsIndexes = new ArrayList<>(allRecordsSize);
+  private List<Integer> readRecordsIndexes = new ArrayList<>(readRecordsSize);
 
   @Override
   public void init() throws DBException {
@@ -69,8 +69,9 @@ public class AerospikeClient extends site.ycsb.DB {
     int port = Integer.parseInt(props.getProperty("as.port", DEFAULT_PORT));
 //    int timeout = Integer.parseInt(props.getProperty("as.timeout",
 //        DEFAULT_TIMEOUT));
-//
+
 //    readPolicy.timeout = timeout;
+//    batchPolicy.timeout = timeout;
 //    insertPolicy.timeout = timeout;
 //    updatePolicy.timeout = timeout;
 //    deletePolicy.timeout = timeout;
@@ -89,6 +90,17 @@ public class AerospikeClient extends site.ycsb.DB {
       throw new DBException(String.format("Error while creating Aerospike " +
           "client for %s:%d.", host, port), e);
     }
+
+    for (int i = 0; i < allRecordsSize; i++) {
+      allRecordsIndexes.add(i);
+    }
+
+    Set<Integer> readIndexSet = new HashSet<>(readRecordsSize);
+    Random random = new Random();
+    while (readIndexSet.size() < readRecordsSize){
+      readIndexSet.add(random.nextInt(allRecordsSize));
+    }
+    readRecordsIndexes = readIndexSet.stream().collect(Collectors.toList());
   }
 
   @Override
@@ -100,26 +112,40 @@ public class AerospikeClient extends site.ycsb.DB {
   public Status read(String table, String key, Set<String> fields,
       Map<String, ByteIterator> result) {
     try {
-      Record record;
+      Key[] keys = readRecordsIndexes.stream().map(idx -> {
+        String keyStr = key + "_" + idx.toString();
+        Key asKey = new Key(namespace, table, keyStr);
+        return asKey;
+      }).collect(Collectors.toList()).toArray(new Key[1]);
 
+      Record[] records;
       if (fields != null) {
-        record = client.get(readPolicy, new Key(namespace, table, key),
+        records = client.get(batchPolicy, keys,
             fields.toArray(new String[fields.size()]));
       } else {
-        record = client.get(readPolicy, new Key(namespace, table, key));
+        records = client.get(batchPolicy, keys);
       }
 
-      if (record == null) {
-        System.err.println("Record key " + key + " not found (read)");
-        return Status.ERROR;
+      if (records.length != readRecordsSize){
+        throw new IllegalStateException("records size is not 200");
       }
 
+      for (Record record: records) {
+        if (record == null) {
+          System.err.println("Record key " + key + " not found (read)");
+          throw new NullPointerException("record is null");
+        }
+      }
+
+      // check the result of last record
+      Record record = records[records.length - 1];
       for (Map.Entry<String, Object> entry: record.bins.entrySet()) {
         result.put(entry.getKey(),
             new ByteArrayByteIterator((byte[])entry.getValue()));
       }
-
       return Status.OK;
+    } catch (NullPointerException e){
+      return Status.ERROR;
     } catch (AerospikeException e) {
       System.err.println("Error while reading key " + key + ": " + e);
       return Status.ERROR;
@@ -143,12 +169,14 @@ public class AerospikeClient extends site.ycsb.DB {
       ++index;
     }
 
-    Key keyObj = new Key(namespace, table, key);
-
-    try {
-      client.put(writePolicy, keyObj, bins);
+    try{
+      allRecordsIndexes.forEach(idx -> {
+        String keyStr = key + "_" + idx;
+        Key keyObj = new Key(namespace, table, keyStr);
+        client.put(writePolicy, keyObj, bins);
+      });
       return Status.OK;
-    } catch (AerospikeException e) {
+    }catch (AerospikeException e){
       System.err.println("Error while writing key " + key + ": " + e);
       return Status.ERROR;
     }
@@ -157,7 +185,8 @@ public class AerospikeClient extends site.ycsb.DB {
   @Override
   public Status update(String table, String key,
                        Map<String, ByteIterator> values) {
-    return write(table, key, updatePolicy, values);
+    System.err.println("update not implemented");
+    return Status.ERROR;
   }
 
   @Override

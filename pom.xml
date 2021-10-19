@@ -112,7 +112,7 @@ LICENSE file.
 
     <!-- datastore binding versions, lex sorted -->
     <accumulo.1.9.version>1.9.3</accumulo.1.9.version>
-    <aerospike.version>3.1.2</aerospike.version>
+    <aerospike.version>5.1.8</aerospike.version>
     <arangodb.version>4.4.1</arangodb.version>
     <asynchbase.version>1.8.2</asynchbase.version>
     <azurecosmos.version>4.8.0</azurecosmos.version>
@@ -160,6 +160,7 @@ LICENSE file.
     <!-- all the datastore bindings, lex sorted please -->
     <module>accumulo1.9</module>
     <module>aerospike</module>
+    <module>aerospike-batch</module>
     <module>arangodb</module>
     <module>asynchbase</module>
     <module>azurecosmos</module>
@@ -198,6 +199,7 @@ LICENSE file.
     <module>s3</module>
     <module>seaweedfs</module>
     <module>scylla</module>
+    <module>scylla-batch</module>
     <module>solr7</module>
     <module>tarantool</module>
     <module>tablestore</module>
